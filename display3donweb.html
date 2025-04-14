@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>Mapbox 3D Buildings</title>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoibmFrYWhhcmFsYWJvIiwiYSI6ImNtNzE4MmRpMTA0cWcybnIxY3Mwb2U2amgifQ.kvWh0YUk1c9nTHyAr1ooew';
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [139.6917, 35.6895], // 東京
+            zoom: 15,
+            pitch: 60,  // 傾斜角（3D効果）
+            bearing: 20, // 方向
+            antialias: true
+        });
+
+        map.on('load', () => {
+            // 3D地形（Terrain）を追加
+            map.addSource('mapbox-dem', {
+                type: 'raster-dem',
+                url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+                tileSize: 512,
+                maxzoom: 14
+            });
+
+            map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+
+            // 空の描画（Sky）を追加
+            map.addLayer({
+                id: 'sky',
+                type: 'sky',
+                paint: {
+                    'sky-type': 'atmosphere',
+                    'sky-atmosphere-sun': [0.0, 0.0],
+                    'sky-atmosphere-sun-intensity': 15
+                }
+            });
+
+            // 3D建物のレイヤーを追加
+            map.addLayer({
+                id: '3d-buildings',
+                source: 'composite',
+                'source-layer': 'building',
+                type: 'fill-extrusion',
+                minzoom: 14,
+                paint: {
+                    'fill-extrusion-color': '#aaa', // 建物の色
+                    'fill-extrusion-height': [
+                        'interpolate', ['linear'], ['zoom'],
+                        14, 0, // ズーム14以下では高さなし
+                        16, ['get', 'height'] // ズーム16以上で実際の建物の高さを適用
+                    ],
+                    'fill-extrusion-base': ['get', 'min_height'],
+                    'fill-extrusion-opacity': 0.8 // 透明度
+                }
+            });
+        });
+
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        };
+
+        // 位置情報の取得
+        if ('geolocation' in navigator)  {
+                    navigator.geolocation.watchPosition(success, error, options);
+        } else {
+            alert('お使いのブラウザでは、位置情報の取得がサポートされていません。');
+        }
+
+        // 位置情報の取得に成功した時の処理
+        function success(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+
+            // 30m以上の誤差がある場合は無視
+            if (accuracy > 30) {
+                console.warn(`位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m）`);
+                return;
+            }
+
+            console.log(`取得した地図の中心: ${map.getCenter().lng}, ${map.getCenter().lat}`);
+            console.log(`flyTo() 実行前の地図の中心: ${latitude}, ${longitude} （誤差: ${accuracy}m）`);
+
+            // すでにマーカーがある場合は更新、なければ作成
+            console.log("Cureent Marker before removing:", window.currentMarker);
+            if (window.currentMarker) {
+                window.currentMarker.remove();
+            }
+
+            // 新しいマーカーを作成
+            console.log("Creating a new marker...");
+            window.currentMarker = new mapboxgl.Marker({ color: 'pink' })
+                .setLngLat([longitude, latitude])
+                .addTo(map);
+            console.log("New marker added:", window.currentMarker);
+
+            // 地図の中心をユーザーの現在位置に移動
+            map.flyTo({
+                center: [longitude, latitude],
+                zoom: 18
+            });
+
+            console.log(`flyTo() 実行後の地図の中心: ${map.getCenter().lng}, ${map.getCenter().lat}`);
+        }
+
+        // 位置情報の取得に失敗した時の処理
+        function error(err) {
+            console.warn(`位置情報の取得に失敗しました（エラーコード: ${err.code}）`);
+        }
+
+    </script>
+</body>
+</html>
