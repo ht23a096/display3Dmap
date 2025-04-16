@@ -14,20 +14,26 @@
 <body>
     <div id="map"></div>
     <script>
+        // Mapboxのアクセストークン（公開用）
         mapboxgl.accessToken = 'pk.eyJ1IjoibmFrYWhhcmFsYWJvIiwiYSI6ImNtNzE4MmRpMTA0cWcybnIxY3Mwb2U2amgifQ.kvWh0YUk1c9nTHyAr1ooew';
 
+        // 初期ズームレベルを設定（ここを変更すれば初期表示の拡大率を調整可能）
+        const initialZoom = 15;
+
+        // 地図の初期化
         const map = new mapboxgl.Map({
             container: 'map',
             style: 'mapbox://styles/mapbox/streets-v11',
-            center: [139.6917, 35.6895], // 東京
-            zoom: 15,
-            pitch: 60,  // 傾斜角（3D効果）
-            bearing: 20, // 方向
-            antialias: true
+            center: [139.6917, 35.6895], // 東京駅周辺
+            zoom: initialZoom,           // ここで初期ズームを適用
+            pitch: 60,                   // カメラの傾き（3D効果）
+            bearing: 20,                 // カメラの方向
+            antialias: true              // アンチエイリアス有効
         });
 
+        // 地図が読み込まれた後に3D地形・建物などを追加
         map.on('load', () => {
-            // 3D地形（Terrain）を追加
+            // 3D地形データのソースを追加
             map.addSource('mapbox-dem', {
                 type: 'raster-dem',
                 url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
@@ -35,9 +41,10 @@
                 maxzoom: 14
             });
 
+            // 地形を有効化し、誇張を加える
             map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
 
-            // 空の描画（Sky）を追加
+            // 空（大気）レイヤーを追加
             map.addLayer({
                 id: 'sky',
                 type: 'sky',
@@ -48,7 +55,7 @@
                 }
             });
 
-            // 3D建物のレイヤーを追加
+            // 建物を3D表示するレイヤーを追加
             map.addLayer({
                 id: '3d-buildings',
                 source: 'composite',
@@ -59,66 +66,62 @@
                     'fill-extrusion-color': '#aaa', // 建物の色
                     'fill-extrusion-height': [
                         'interpolate', ['linear'], ['zoom'],
-                        14, 0, // ズーム14以下では高さなし
-                        16, ['get', 'height'] // ズーム16以上で実際の建物の高さを適用
+                        14, 0, // ズーム14以下では高さゼロ
+                        16, ['get', 'height'] // ズーム16で建物の高さ表示
                     ],
                     'fill-extrusion-base': ['get', 'min_height'],
-                    'fill-extrusion-opacity': 0.8 // 透明度
+                    'fill-extrusion-opacity': 0.8 // 不透明度
                 }
             });
         });
 
+        // 位置情報取得のオプション
         const options = {
             enableHighAccuracy: true,
             timeout: 10000,
             maximumAge: 0
         };
 
-        // 位置情報の取得
+        // ブラウザがGeolocation APIをサポートしているか確認
         if ('geolocation' in navigator)  {
-                    navigator.geolocation.watchPosition(success, error, options);
+            // 位置情報の監視（リアルタイム更新）
+            navigator.geolocation.watchPosition(success, error, options);
         } else {
             alert('お使いのブラウザでは、位置情報の取得がサポートされていません。');
         }
 
-        // 位置情報の取得に成功した時の処理
+        // 位置情報取得成功時の処理
         function success(position) {
             const latitude = position.coords.latitude;
             const longitude = position.coords.longitude;
             const accuracy = position.coords.accuracy;
 
-            // 30m以上の誤差がある場合は無視
+            // 精度が30m以上なら無視（位置が不正確すぎる場合）
             if (accuracy > 30) {
                 console.warn(`位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m）`);
                 return;
             }
 
-            console.log(`取得した地図の中心: ${map.getCenter().lng}, ${map.getCenter().lat}`);
-            console.log(`flyTo() 実行前の地図の中心: ${latitude}, ${longitude} （誤差: ${accuracy}m）`);
-
-            // すでにマーカーがある場合は更新、なければ作成
-            console.log("Cureent Marker before removing:", window.currentMarker);
+            // 既存のマーカーがあれば削除
             if (window.currentMarker) {
                 window.currentMarker.remove();
             }
 
-            // 新しいマーカーを作成
-            console.log("Creating a new marker...");
+            // 新しい位置にマーカーを追加（ピンク色）
             window.currentMarker = new mapboxgl.Marker({ color: 'pink' })
                 .setLngLat([longitude, latitude])
                 .addTo(map);
-            console.log("New marker added:", window.currentMarker);
 
-            // 地図の中心をユーザーの現在位置に移動
+            // flyTo で位置を移動（ズームは現在のまま維持）
+            const currentZoom = map.getZoom(); // 現在のズームを取得
+
             map.flyTo({
                 center: [longitude, latitude],
-                zoom: 18
+                zoom: currentZoom // ズームレベルを固定
             });
-
-            console.log(`flyTo() 実行後の地図の中心: ${map.getCenter().lng}, ${map.getCenter().lat}`);
         }
 
-        // 位置情報の取得に失敗した時の処理
+        // 位置情報取得失敗時の処理
         function error(err) {
             console.warn(`位置情報の取得に失敗しました（エラーコード: ${err.code}）`);
         }
