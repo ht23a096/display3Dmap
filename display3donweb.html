@@ -48,11 +48,7 @@
     };
 
     if ('geolocation' in navigator) {
-      // 初回現在地取得 → 地図初期化
       navigator.geolocation.getCurrentPosition(initMap, geoError, geoOptions);
-
-      // 位置の追跡開始
-      navigator.geolocation.watchPosition(updatePosition, geoError, geoOptions);
     } else {
       alert('お使いのブラウザでは、位置情報の取得がサポートされていません。');
     }
@@ -64,7 +60,7 @@
       map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/streets-v11',
-        center: [longitude, latitude], // 現在地で開始
+        center: [longitude, latitude], // 現在地からスタート
         zoom: 15,
         pitch: 60,
         bearing: 20,
@@ -109,10 +105,13 @@
           }
         });
 
-        // 初回現在地マーカー
+        // 現在地マーカー追加
         window.currentMarker = new mapboxgl.Marker({ color: 'pink' })
           .setLngLat([longitude, latitude])
           .addTo(map);
+
+        // 地図読み込み完了後に位置追跡を開始
+        navigator.geolocation.watchPosition(updatePosition, geoError, geoOptions);
       });
     }
 
