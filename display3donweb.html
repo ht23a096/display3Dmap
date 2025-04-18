@@ -1,160 +1,150 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
-    <title>Mapbox 3D Buildings</title>
-    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
-    <style>
-        body { margin: 0; padding: 0; }
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-        /* 追尾ボタンのスタイル */
-        #recenter-btn {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 1;
-            padding: 10px;
-            background: white;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            cursor: pointer;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Mapbox 3D Buildings</title>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    #recenter-btn {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1;
+      padding: 10px;
+      background: white;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-    <!-- 地図の表示領域 -->
-    <div id="map"></div>
+  <div id="map"></div>
+  <button id="recenter-btn">現在地に戻る</button>
 
-    <!-- 現在地に戻るボタン -->
-    <button id="recenter-btn">現在地に戻る</button>
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoibmFrYWhhcmFsYWJvIiwiYSI6ImNtNzE4MmRpMTA0cWcybnIxY3Mwb2U2amgifQ.kvWh0YUk1c9nTHyAr1ooew';
 
-    <script>
-        // Mapboxのアクセストークン（公開用）
-        mapboxgl.accessToken = 'pk.eyJ1IjoibmFrYWhhcmFsYWJvIiwiYSI6ImNtNzE4MmRpMTA0cWcybnIxY3Mwb2U2amgifQ.kvWh0YUk1c9nTHyAr1ooew';
+    let map;
+    let shouldFollowUser = false;
 
-        // 初期ズームレベル
-        const initialZoom = 15;
+    document.getElementById('recenter-btn').addEventListener('click', () => {
+      if (window.currentPosition) {
+        shouldFollowUser = true;
+        map.flyTo({
+          center: [window.currentPosition.coords.longitude, window.currentPosition.coords.latitude]
+        });
+      }
+    });
 
-        // 地図の初期化
-        const map = new mapboxgl.Map({
-            container: 'map',
-            style: 'mapbox://styles/mapbox/streets-v11',
-            center: [139.6917, 35.6895], // 東京駅周辺
-            zoom: initialZoom,
-            pitch: 60,
-            bearing: 20,
-            antialias: true
+    const geoOptions = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    };
+
+    if ('geolocation' in navigator) {
+      // ✅ 初回現在地取得 → 地図初期化
+      navigator.geolocation.getCurrentPosition(initMap, geoError, geoOptions);
+
+      // ✅ 位置の追跡開始
+      navigator.geolocation.watchPosition(updatePosition, geoError, geoOptions);
+    } else {
+      alert('お使いのブラウザでは、位置情報の取得がサポートされていません。');
+    }
+
+    function initMap(position) {
+      const { latitude, longitude } = position.coords;
+      window.currentPosition = position;
+
+      map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [longitude, latitude], // ✅ 現在地で開始
+        zoom: 15,
+        pitch: 60,
+        bearing: 20,
+        antialias: true
+      });
+
+      map.on('load', () => {
+        map.addSource('mapbox-dem', {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512,
+          maxzoom: 14
         });
 
-        map.on('load', () => {
-            // 地形データを追加
-            map.addSource('mapbox-dem', {
-                type: 'raster-dem',
-                url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-                tileSize: 512,
-                maxzoom: 14
-            });
+        map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
 
-            // 地形の設定
-            map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
-
-            // 空の描画
-            map.addLayer({
-                id: 'sky',
-                type: 'sky',
-                paint: {
-                    'sky-type': 'atmosphere',
-                    'sky-atmosphere-sun': [0.0, 0.0],
-                    'sky-atmosphere-sun-intensity': 15
-                }
-            });
-
-            // 建物を3D表示
-            map.addLayer({
-                id: '3d-buildings',
-                source: 'composite',
-                'source-layer': 'building',
-                type: 'fill-extrusion',
-                minzoom: 14,
-                paint: {
-                    'fill-extrusion-color': '#aaa',
-                    'fill-extrusion-height': [
-                        'interpolate', ['linear'], ['zoom'],
-                        14, 0,
-                        16, ['get', 'height']
-                    ],
-                    'fill-extrusion-base': ['get', 'min_height'],
-                    'fill-extrusion-opacity': 0.8
-                }
-            });
+        map.addLayer({
+          id: 'sky',
+          type: 'sky',
+          paint: {
+            'sky-type': 'atmosphere',
+            'sky-atmosphere-sun': [0.0, 0.0],
+            'sky-atmosphere-sun-intensity': 15
+          }
         });
 
-        // 現在地追尾フラグ（初期値 false）
-        let shouldFollowUser = false;
-
-        // 現在地に戻るボタンのクリックイベント
-        document.getElementById('recenter-btn').addEventListener('click', () => {
-            if (window.currentPosition) {
-                shouldFollowUser = true;
-                map.flyTo({
-                    center: [window.currentPosition.coords.longitude, window.currentPosition.coords.latitude]
-                });
-            }
+        map.addLayer({
+          id: '3d-buildings',
+          source: 'composite',
+          'source-layer': 'building',
+          type: 'fill-extrusion',
+          minzoom: 14,
+          paint: {
+            'fill-extrusion-color': '#aaa',
+            'fill-extrusion-height': [
+              'interpolate', ['linear'], ['zoom'],
+              14, 0,
+              16, ['get', 'height']
+            ],
+            'fill-extrusion-base': ['get', 'min_height'],
+            'fill-extrusion-opacity': 0.8
+          }
         });
 
-        // 位置情報取得オプション
-        const options = {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-        };
+        // ✅ 初回現在地マーカー
+        window.currentMarker = new mapboxgl.Marker({ color: 'pink' })
+          .setLngLat([longitude, latitude])
+          .addTo(map);
+      });
+    }
 
-        if ('geolocation' in navigator) {
-            navigator.geolocation.watchPosition(success, error, options);
-        } else {
-            alert('お使いのブラウザでは、位置情報の取得がサポートされていません。');
-        }
+    function updatePosition(position) {
+      const { latitude, longitude, accuracy } = position.coords;
+      window.currentPosition = position;
 
-        // 位置情報取得成功時
-        function success(position) {
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
-            const accuracy = position.coords.accuracy;
+      if (accuracy > 30) {
+        console.warn(`位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m）`);
+        return;
+      }
 
-            // 現在位置を記録しておく
-            window.currentPosition = position;
+      // 既存マーカー削除
+      if (window.currentMarker) {
+        window.currentMarker.remove();
+      }
 
-            if (accuracy > 30) {
-                console.warn(`位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m）`);
-                return;
-            }
+      // 新しいマーカー追加
+      window.currentMarker = new mapboxgl.Marker({ color: 'pink' })
+        .setLngLat([longitude, latitude])
+        .addTo(map);
 
-            // 既存マーカーがあれば削除
-            if (window.currentMarker) {
-                window.currentMarker.remove();
-            }
+      // ✅ 「現在地に戻る」操作時だけ flyTo
+      if (shouldFollowUser && map) {
+        map.flyTo({ center: [longitude, latitude] });
+        shouldFollowUser = false;
+      }
+    }
 
-            // 現在位置にマーカーを追加
-            window.currentMarker = new mapboxgl.Marker({ color: 'pink' })
-                .setLngLat([longitude, latitude])
-                .addTo(map);
-
-            // ユーザーが「戻る」操作をしたときだけflyToで中心移動
-            if (shouldFollowUser) {
-                map.flyTo({
-                    center: [longitude, latitude]
-                });
-                shouldFollowUser = false;
-            }
-        }
-
-        // 位置情報取得失敗時
-        function error(err) {
-            console.warn(`位置情報の取得に失敗しました（エラーコード: ${err.code}）`);
-        }
-
-    </script>
+    function geoError(err) {
+      console.warn(`位置情報の取得に失敗しました（エラーコード: ${err.code}）`);
+    }
+  </script>
 </body>
 </html>
