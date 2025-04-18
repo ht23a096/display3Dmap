@@ -9,15 +9,32 @@
     <style>
         body { margin: 0; padding: 0; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        /* 追尾ボタンのスタイル */
+        #recenter-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+    <!-- 地図の表示領域 -->
     <div id="map"></div>
+
+    <!-- 現在地に戻るボタン -->
+    <button id="recenter-btn">現在地に戻る</button>
+
     <script>
         // Mapboxのアクセストークン（公開用）
         mapboxgl.accessToken = 'pk.eyJ1IjoibmFrYWhhcmFsYWJvIiwiYSI6ImNtNzE4MmRpMTA0cWcybnIxY3Mwb2U2amgifQ.kvWh0YUk1c9nTHyAr1ooew';
 
-        // 初期ズームレベルを設定（ここを変更すれば初期表示の拡大率を調整可能）
+        // 初期ズームレベル
         const initialZoom = 15;
 
         // 地図の初期化
@@ -25,15 +42,14 @@
             container: 'map',
             style: 'mapbox://styles/mapbox/streets-v11',
             center: [139.6917, 35.6895], // 東京駅周辺
-            zoom: initialZoom,           // ここで初期ズームを適用
-            pitch: 60,                   // カメラの傾き（3D効果）
-            bearing: 20,                 // カメラの方向
-            antialias: true              // アンチエイリアス有効
+            zoom: initialZoom,
+            pitch: 60,
+            bearing: 20,
+            antialias: true
         });
 
-        // 地図が読み込まれた後に3D地形・建物などを追加
         map.on('load', () => {
-            // 3D地形データのソースを追加
+            // 地形データを追加
             map.addSource('mapbox-dem', {
                 type: 'raster-dem',
                 url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
@@ -41,10 +57,10 @@
                 maxzoom: 14
             });
 
-            // 地形を有効化し、誇張を加える
+            // 地形の設定
             map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
 
-            // 空（大気）レイヤーを追加
+            // 空の描画
             map.addLayer({
                 id: 'sky',
                 type: 'sky',
@@ -55,7 +71,7 @@
                 }
             });
 
-            // 建物を3D表示するレイヤーを追加
+            // 建物を3D表示
             map.addLayer({
                 id: '3d-buildings',
                 source: 'composite',
@@ -63,64 +79,78 @@
                 type: 'fill-extrusion',
                 minzoom: 14,
                 paint: {
-                    'fill-extrusion-color': '#aaa', // 建物の色
+                    'fill-extrusion-color': '#aaa',
                     'fill-extrusion-height': [
                         'interpolate', ['linear'], ['zoom'],
-                        14, 0, // ズーム14以下では高さゼロ
-                        16, ['get', 'height'] // ズーム16で建物の高さ表示
+                        14, 0,
+                        16, ['get', 'height']
                     ],
                     'fill-extrusion-base': ['get', 'min_height'],
-                    'fill-extrusion-opacity': 0.8 // 不透明度
+                    'fill-extrusion-opacity': 0.8
                 }
             });
         });
 
-        // 位置情報取得のオプション
+        // 現在地追尾フラグ（初期値 false）
+        let shouldFollowUser = false;
+
+        // 現在地に戻るボタンのクリックイベント
+        document.getElementById('recenter-btn').addEventListener('click', () => {
+            if (window.currentPosition) {
+                shouldFollowUser = true;
+                map.flyTo({
+                    center: [window.currentPosition.coords.longitude, window.currentPosition.coords.latitude]
+                });
+            }
+        });
+
+        // 位置情報取得オプション
         const options = {
             enableHighAccuracy: true,
             timeout: 10000,
             maximumAge: 0
         };
 
-        // ブラウザがGeolocation APIをサポートしているか確認
-        if ('geolocation' in navigator)  {
-            // 位置情報の監視（リアルタイム更新）
+        if ('geolocation' in navigator) {
             navigator.geolocation.watchPosition(success, error, options);
         } else {
             alert('お使いのブラウザでは、位置情報の取得がサポートされていません。');
         }
 
-        // 位置情報取得成功時の処理
+        // 位置情報取得成功時
         function success(position) {
             const latitude = position.coords.latitude;
             const longitude = position.coords.longitude;
             const accuracy = position.coords.accuracy;
 
-            // 精度が30m以上なら無視（位置が不正確すぎる場合）
+            // 現在位置を記録しておく
+            window.currentPosition = position;
+
             if (accuracy > 30) {
                 console.warn(`位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m）`);
                 return;
             }
 
-            // 既存のマーカーがあれば削除
+            // 既存マーカーがあれば削除
             if (window.currentMarker) {
                 window.currentMarker.remove();
             }
 
-            // 新しい位置にマーカーを追加（ピンク色）
+            // 現在位置にマーカーを追加
             window.currentMarker = new mapboxgl.Marker({ color: 'pink' })
                 .setLngLat([longitude, latitude])
                 .addTo(map);
 
-            // flyTo で位置を移動（ズームは現在のまま維持）
-            const currentZoom = map.getZoom(); // 現在のズームを取得
-
-            map.flyTo({
-                center: [longitude, latitude]
-            });
+            // ユーザーが「戻る」操作をしたときだけflyToで中心移動
+            if (shouldFollowUser) {
+                map.flyTo({
+                    center: [longitude, latitude]
+                });
+                shouldFollowUser = false;
+            }
         }
 
-        // 位置情報取得失敗時の処理
+        // 位置情報取得失敗時
         function error(err) {
             console.warn(`位置情報の取得に失敗しました（エラーコード: ${err.code}）`);
         }
