@@ -48,10 +48,10 @@
     };
 
     if ('geolocation' in navigator) {
-      // ✅ 初回現在地取得 → 地図初期化
+      // 初回現在地取得 → 地図初期化
       navigator.geolocation.getCurrentPosition(initMap, geoError, geoOptions);
 
-      // ✅ 位置の追跡開始
+      // 位置の追跡開始
       navigator.geolocation.watchPosition(updatePosition, geoError, geoOptions);
     } else {
       alert('お使いのブラウザでは、位置情報の取得がサポートされていません。');
@@ -64,7 +64,7 @@
       map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/streets-v11',
-        center: [longitude, latitude], // ✅ 現在地で開始
+        center: [longitude, latitude], // 現在地で開始
         zoom: 15,
         pitch: 60,
         bearing: 20,
@@ -109,7 +109,7 @@
           }
         });
 
-        // ✅ 初回現在地マーカー
+        // 初回現在地マーカー
         window.currentMarker = new mapboxgl.Marker({ color: 'pink' })
           .setLngLat([longitude, latitude])
           .addTo(map);
@@ -135,7 +135,7 @@
         .setLngLat([longitude, latitude])
         .addTo(map);
 
-      // ✅ 「現在地に戻る」操作時だけ flyTo
+      // 「現在地に戻る」操作時だけ flyTo
       if (shouldFollowUser && map) {
         map.flyTo({ center: [longitude, latitude] });
         shouldFollowUser = false;
