@@ -20,6 +20,14 @@
       border: 1px solid #ccc;
       cursor: pointer;
     }
+    /* 避難所マーカー用スタイル */
+    .shelter-marker {
+      background-color: #007cbf;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
   </style>
 </head>
 <body>
@@ -31,6 +39,25 @@
 
     let map;
     let shouldFollowUser = false;
+
+    // 避難所スポットデータ
+    const shelterSpots = [
+      {
+        name: '千代田区立麹町小学校',
+        description: '指定避難所です。',
+        coordinates: [139.7375, 35.6841]
+      },
+      {
+        name: '港区立赤坂中学校',
+        description: '指定避難所です。',
+        coordinates: [139.7350, 35.6722]
+      },
+      {
+        name: '新宿区立四谷小学校',
+        description: '指定避難所です。',
+        coordinates: [139.7169, 35.6850]
+      }
+    ];
 
     document.getElementById('recenter-btn').addEventListener('click', () => {
       if (window.currentPosition) {
@@ -109,7 +136,8 @@
           }
         });
 
-        // 重複を防ぐためマーカーを追加しない
+        // 避難所スポットをマップに追加
+        addShelterSpots();
       });
     }
 
@@ -141,6 +169,20 @@
 
     function geoError(err) {
       console.warn(`位置情報の取得に失敗しました（エラーコード: ${err.code}）`);
+    }
+
+    // 避難所スポットを追加する関数
+    function addShelterSpots() {
+      shelterSpots.forEach(spot => {
+        const el = document.createElement('div');
+        el.className = 'shelter-marker';
+
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat(spot.coordinates)
+          .setPopup(new mapboxgl.Popup({ offset: 25 })
+            .setHTML(`<h3>${spot.name}</h3><p>${spot.description}</p>`))
+          .addTo(map);
+      });
     }
   </script>
 </body>
