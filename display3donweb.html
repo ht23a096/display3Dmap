@@ -33,6 +33,7 @@
 <body>
   <div id="map"></div>
   <button id="recenter-btn">現在地に戻る</button>
+  <input type="file" id="imageinput" aceept="image/*" style="display: none;" />
 
   <script>
     mapboxgl.accessToken = 'pk.eyJ1IjoibmFrYWhhcmFsYWJvIiwiYSI6ImNtNzE4MmRpMTA0cWcybnIxY3Mwb2U2amgifQ.kvWh0YUk1c9nTHyAr1ooew';
@@ -45,67 +46,80 @@
       {
         name: '大阪電気通信大学寝屋川キャンパス',
         description: 'J号館',
-        coordinates: [135.6259, 34.7607]
+        coordinates: [135.6259, 34.7607],
+        image: null
       },
       {
         name: '大阪電気通信大学寝屋川キャンパス',
         description: 'A号館',
-        coordinates: [135.6260, 34.7604]
+        coordinates: [135.6260, 34.7604],
+        image: null
       },
       {
         name: '大阪電気通信大学寝屋川キャンパス',
         description: 'クラブハウス',
-        coordinates: [135.6254, 34.7601]
+        coordinates: [135.6254, 34.7601],
+        image: null
       },
       {
         name: '大阪電気通信大学四条畷キャンパス',
         description: '2号館',
-        coordinates: [135.6587, 34.7424]
+        coordinates: [135.6587, 34.7424],
+        image: null
       },
       {
         name: '大阪電気通信大学四条畷キャンパス',
         description: '11号館',
-        coordinates: [135.6594, 34.7420]
+        coordinates: [135.6594, 34.7420],
+        image: null
       },
       {
         name: '大阪電気通信大学四条畷キャンパス',
         description: '5号館',
-        coordinates: [135.6595, 34.7427]
+        coordinates: [135.6595, 34.7427],
+        image: null
       },
       {
         name: '大阪電気通信大学四条畷キャンパス',
         description: '10号館',
-        coordinates: [135.6602, 34.7431]
+        coordinates: [135.6602, 34.7431],
+        image: null
       },
       {
         name: '大阪電気通信大学四条畷キャンパス',
         description: '体育館',
-        coordinates: [135.6595, 34.7434]
+        coordinates: [135.6595, 34.7434],
+        image: null
       },
       {
         name: '大阪電気通信大学四条畷キャンパス',
         description: 'コナミホール',
-        coordinates: [135.6601, 34.7434]
+        coordinates: [135.6601, 34.7434],
+        image: null
       },
       {
         name: '大阪電気通信大学四条畷キャンパス',
         description: '8号館',
-        coordinates: [135.6612, 34.7435]
+        coordinates: [135.6612, 34.7435],
+        image: null
       },
       {
         name: '大阪電気通信大学四条畷キャンパス',
         description: 'KOUZUKIホール',
-        coordinates: [135.6593, 34.7430]
+        coordinates: [135.6593, 34.7430],
+        image: null
       },
       {
         name: '大阪電気通信大学四条畷キャンパス',
         description: '1号館',
-        coordinates: [135.6588, 34.7419]
+        coordinates: [135.6588, 34.7419],
+        image: null
       },
       {
         name: '大阪電気通信大学四条畷キャンパス',
         description: '6号館',
-        coordinates: [135.6602, 34.7436]
+        coordinates: [135.6602, 34.7436],
+        image: null
       }
     ];
 
@@ -234,6 +248,50 @@
           .addTo(map);
       });
     }
+
+function createPopupContent(spot, index) {
+  const container = document.createElement('div');
+
+  const title = document.createElement('h3');
+  title.textContent = spot.name;
+
+  const desc = document.createElement('p');
+  desc.textContent = spot.description;
+
+  const img = document.createElement('img');
+  img.style.width = '100%';
+  img.style.marginTop = '5px';
+  if (spot.image) {
+    img.src = spot.image;
+  }
+
+  const btn = document.createElement('button');
+  btn.textContent = '画像を選択';
+  btn.style.marginTop = '5px';
+  btn.addEventListener('click', () => {
+    const input = document.getElementById('imageInput');
+    input.click();
+
+    input.onchange = () => {
+      const file = input.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          spot.image = reader.result;
+          img.src = spot.image;
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+  });
+
+  container.appendChild(title);
+  container.appendChild(desc);
+  container.appendChild(btn);
+  container.appendChild(img);
+
+  return container;
+}
   </script>
 </body>
 </html>
