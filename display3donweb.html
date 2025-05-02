@@ -241,12 +241,10 @@
         const el = document.createElement('div');
         el.className = 'shelter-marker';
 
-        const popupContent = createPopupContent(spot, index);
-
         const marker = new mapboxgl.Marker(el)
           .setLngLat(spot.coordinates)
           .setPopup(new mapboxgl.Popup({ offset: 25 })
-            .setDOMContent(popupContent))
+            .setHTML(`<h3>${spot.name}</h3><p>${spot.description}</p>`))
           .addTo(map);
       });
     }
