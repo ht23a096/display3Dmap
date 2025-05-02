@@ -33,7 +33,7 @@
 <body>
   <div id="map"></div>
   <button id="recenter-btn">現在地に戻る</button>
-  <input type="file" id="imageinput" aceept="image/*" style="display: none;" />
+  <input type="file" id="imageInput" aceept="image/*" style="display: none;" />
 
   <script>
     mapboxgl.accessToken = 'pk.eyJ1IjoibmFrYWhhcmFsYWJvIiwiYSI6ImNtNzE4MmRpMTA0cWcybnIxY3Mwb2U2amgifQ.kvWh0YUk1c9nTHyAr1ooew';
@@ -241,10 +241,12 @@
         const el = document.createElement('div');
         el.className = 'shelter-marker';
 
+        const popupContent = createPopupContent(spot, index);
+
         const marker = new mapboxgl.Marker(el)
           .setLngLat(spot.coordinates)
           .setPopup(new mapboxgl.Popup({ offset: 25 })
-            .setHTML(`<h3>${spot.name}</h3><p>${spot.description}</p>`))
+            .setDOMCContent(popupContent))
           .addTo(map);
       });
     }
