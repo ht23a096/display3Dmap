@@ -237,15 +237,19 @@
 
     // 避難所スポットを追加する関数
     function addShelterSpots() {
-      shelterSpots.forEach(spot => {
-        const el = document.createElement('div');
-        el.className = 'shelter-marker';
+  shelterSpots.forEach((spot, index) => {
+    const el = document.createElement('div');
+    el.className = 'shelter-marker';
 
-        const marker = new mapboxgl.Marker(el)
-          .setLngLat(spot.coordinates)
-          .setPopup(new mapboxgl.Popup({ offset: 25 })
-            .setHTML(`<h3>${spot.name}</h3><p>${spot.description}</p>`))
-          .addTo(map);
+    const popupContent = createPopupContent(spot, index);
+
+    const popup = new mapboxgl.Popup({ offset: 25 });
+    popup.setDOMContent(popupContent);  // DOMを直接設定
+
+    new mapboxgl.Marker(el)
+      .setLngLat(spot.coordinates)
+      .setPopup(popup)
+      .addTo(map);
       });
     }
     function createPopupContent(spot, index) {
@@ -268,6 +272,10 @@
       btn.style.marginTop = '5px';
       btn.addEventListener('click', () => {
         const input = document.getElementById('imageInput');
+        if (!input){
+          alert('画像入力フォームが見つかりません。 ');
+          return;
+        }
         input.click();
         
         input.onchange = () => {
