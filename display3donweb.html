@@ -314,11 +314,9 @@
       container.appendChild(desc);
       container.appendChild(btn);
       container.appendChild(img);
-
-  return container;
-}
-
-// Turf.js を使って円を描画
+      return container;
+    }
+    // Turf.js を使って円を描画
     function addShelterRangeCircle(spot, index) {
       const radiusInMeters = 5;
       const point = turf.point(spot.coordinates);
