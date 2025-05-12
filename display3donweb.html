@@ -6,6 +6,7 @@
   <title>Mapbox 3D Buildings</title>
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
   <style>
     body { margin: 0; padding: 0; }
     #map { position: absolute; top: 0; bottom: 0; width: 100%; }
@@ -233,6 +234,24 @@
 
     function geoError(err) {
       console.warn(`位置情報の取得に失敗しました（エラーコード: ${err.code}）`);
+
+      function addShelterSpots() {
+  shelterSpots.forEach((spot, index) => {
+    const el = document.createElement('div');
+    el.className = 'shelter-marker';
+
+    const popupContent = createPopupContent(spot, index);
+    const popup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent);
+  }
+
+    new mapboxgl.Marker(el)
+      .setLngLat(spot.coordinates)
+      .setPopup(popup)
+      .addTo(map);
+
+    // 円を追加する
+    addShelterRangeCircle(spot, index);
+      });
     }
 
     // 避難所スポットを追加する関数
@@ -298,6 +317,32 @@
 
   return container;
 }
+
+// Turf.js を使って円を描画
+    function addShelterRangeCircle(spot, index) {
+      const radiusInMeters = 5;
+      const point = turf.point(spot.coordinates);
+      const circle = turf.circle(point, radiusInMeters, {
+        steps: 64,
+        units: 'meters'
+      });
+
+      map.addSource(`shelter-circle-${index}`, {
+        type: 'geojson',
+        data: circle
+      });
+
+      map.addLayer({
+        id: `shelter-circle-layer-${index}`,
+        type: 'fill',
+        source: `shelter-circle-${index}`,
+        layout: {},
+        paint: {
+          'fill-color': '#007cbf',
+          'fill-opacity': 0.2
+        }
+      });
+    }
   </script>
 </body>
 </html>
