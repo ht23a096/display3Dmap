@@ -213,96 +213,180 @@
       console.warn(`位置情報の取得に失敗しました（エラーコード: ${err.code}）`);
     }
 
-    function addShelterSpots() {
-      shelterSpots.forEach((spot, index) => {
-        const el = document.createElement('div');
-        el.className = 'shelter-marker';
+    // 半径5mで範囲内かを判定するヘルパー関数（Haversine）
+  function isUserInRange(userCoords, targetCoords, radiusMeters = 5) {
+    const R = 6371e3; // 地球の半径（メートル）
+    const toRad = deg => deg * Math.PI / 180;
 
-        const popupContent = createPopupContent(spot, index);
-        const popup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent);
+    const φ1 = toRad(userCoords[1]);
+    const φ2 = toRad(targetCoords[1]);
+    const Δφ = toRad(targetCoords[1] - userCoords[1]);
+    const Δλ = toRad(targetCoords[0] - userCoords[0]);
 
-        new mapboxgl.Marker(el)
-          .setLngLat(spot.coordinates)
-          .setPopup(popup)
-          .addTo(map);
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-        // 円の追加
-        addShelterRangeCircle(spot, index);
-      });
-    }
+    const distance = R * c; // 距離（メートル）
+    return distance <= radiusMeters;
+  }
 
-    function createPopupContent(spot, index) {
-      const container = document.createElement('div');
-      const title = document.createElement('h3');
-      title.textContent = spot.name;
+  // サークルレイヤーと範囲内フラグを shelterSpots に追加
+  shelterSpots.forEach(spot => {
+    spot.inRange = false;
+    spot.circleId = 'circle-' + spot.coordinates.join('-');
+  });
 
-      const desc = document.createElement('p');
-      desc.textContent = spot.description;
+  function addShelterSpots() {
+    shelterSpots.forEach((spot, index) => {
+      const el = document.createElement('div');
+      el.className = 'shelter-marker';
 
-      const img = document.createElement('img');
-      img.style.width = '100%';
-      img.style.marginTop = '5px';
-      if (spot.image) {
-        img.src = spot.image;
-      }
+      const popupContent = createPopupContent(spot, index);
+      const popup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent);
 
-      const btn = document.createElement('button');
-      btn.textContent = '画像を選択';
-      btn.style.marginTop = '5px';
-      btn.addEventListener('click', () => {
-        const input = document.getElementById('imageInput');
-        if (!input) {
-          alert('画像入力フォームが見つかりません。');
-          return;
-        }
-        input.click();
+      new mapboxgl.Marker(el)
+        .setLngLat(spot.coordinates)
+        .setPopup(popup)
+        .addTo(map);
 
-        input.onchange = () => {
-          const file = input.files[0];
-          if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = () => {
-              spot.image = reader.result;
-              img.src = spot.image;
-            };
-            reader.readAsDataURL(file);
-          }
-        };
-      });
-
-      container.appendChild(title);
-      container.appendChild(desc);
-      container.appendChild(btn);
-      container.appendChild(img);
-
-      return container;
-    }
-
-    // Turf.js を使って円を描画
-    function addShelterRangeCircle(spot, index) {
-      const radiusInMeters = 5;
-      const point = turf.point(spot.coordinates);
-      const circle = turf.circle(point, radiusInMeters, {
-        steps: 64,
-        units: 'meters'
-      });
-
-      map.addSource(`shelter-circle-${index}`, {
+      // 円レイヤー追加
+      const circleId = spot.circleId;
+      map.addSource(circleId, {
         type: 'geojson',
-        data: circle
+        data: createCircleGeoJSON(spot.coordinates, 5)
       });
-
       map.addLayer({
-        id: `shelter-circle-layer-${index}`,
+        id: circleId,
         type: 'fill',
-        source: `shelter-circle-${index}`,
-        layout: {},
+        source: circleId,
         paint: {
-          'fill-color': '#007cbf',
-          'fill-opacity': 0.2
+          'fill-color': '#00ccff',
+          'fill-opacity': 0.3
         }
       });
+    });
+  }
+
+  function createPopupContent(spot, index) {
+    const container = document.createElement('div');
+    const title = document.createElement('h3');
+    title.textContent = spot.name;
+
+    const desc = document.createElement('p');
+    desc.textContent = spot.description;
+
+    if (spot.inRange) {
+      const reward = document.createElement('p');
+      reward.textContent = '🎉 報酬取得可能 🎉';
+      reward.style.color = 'green';
+      container.appendChild(reward);
     }
+
+    const img = document.createElement('img');
+    img.style.width = '100%';
+    img.style.marginTop = '5px';
+    if (spot.image) img.src = spot.image;
+
+    const btn = document.createElement('button');
+    btn.textContent = '画像を選択';
+    btn.style.marginTop = '5px';
+    btn.addEventListener('click', () => {
+      const input = document.getElementById('imageInput');
+      if (!input) {
+        alert('画像入力フォームが見つかりません。');
+        return;
+      }
+      input.click();
+      input.onchange = () => {
+        const file = input.files[0];
+        if (file && file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            spot.image = reader.result;
+            img.src = spot.image;
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+    });
+
+    container.appendChild(title);
+    container.appendChild(desc);
+    container.appendChild(btn);
+    container.appendChild(img);
+    return container;
+  }
+
+  function createCircleGeoJSON(center, radiusInMeters) {
+    const points = 64;
+    const coords = [];
+    const earthRadius = 6378137;
+
+    for (let i = 0; i < points; i++) {
+      const angle = (i * 360) / points;
+      const dx = radiusInMeters * Math.cos(angle * Math.PI / 180);
+      const dy = radiusInMeters * Math.sin(angle * Math.PI / 180);
+
+      const lngOffset = dx / (earthRadius * Math.cos(center[1] * Math.PI / 180)) * (180 / Math.PI);
+      const latOffset = dy / earthRadius * (180 / Math.PI);
+
+      coords.push([center[0] + lngOffset, center[1] + latOffset]);
+    }
+    coords.push(coords[0]); // close the polygon
+
+    return {
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [coords]
+      }
+    };
+  }
+
+  // 現在位置更新時の処理：範囲チェックして円色と情報を更新
+  function updatePosition(position) {
+    const { latitude, longitude, accuracy } = position.coords;
+    window.currentPosition = position;
+
+    if (accuracy > 30) {
+      console.warn(`位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m）`);
+      return;
+    }
+
+    if (window.currentMarker) {
+      window.currentMarker.remove();
+    }
+
+    window.currentMarker = new mapboxgl.Marker({ color: 'pink' })
+      .setLngLat([longitude, latitude])
+      .addTo(map);
+
+    if (shouldFollowUser && map) {
+      map.flyTo({ center: [longitude, latitude] });
+      shouldFollowUser = false;
+    }
+
+    // 範囲判定＆更新
+    const userCoords = [longitude, latitude];
+    shelterSpots.forEach((spot, index) => {
+      const inRangeNow = isUserInRange(userCoords, spot.coordinates, 5);
+
+      if (inRangeNow !== spot.inRange) {
+        spot.inRange = inRangeNow;
+
+        // 円の色を更新
+        map.setPaintProperty(spot.circleId, 'fill-color', inRangeNow ? '#00ff00' : '#00ccff');
+
+        // ポップアップ更新（表示中なら再描画）
+        if (map && map.hasLayer(spot.circleId)) {
+          const popupContent = createPopupContent(spot, index);
+          const popup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent);
+        }
+      }
+    });
+  }
   </script>
 </body>
 </html>
