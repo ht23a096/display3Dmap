@@ -246,10 +246,12 @@
       const popupContent = createPopupContent(spot, index);
       const popup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent);
 
-      new mapboxgl.Marker(el)
+      const marker = new mapboxgl.Marker(el)
         .setLngLat(spot.coordinates)
         .setPopup(popup)
         .addTo(map);
+
+      spot.marker = marker;
 
       // 円レイヤー追加
       const circleId = spot.circleId;
@@ -375,6 +377,18 @@
 
       if (inRangeNow !== spot.inRange) {
         spot.inRange = inRangeNow;
+        if (spot.marker) {
+          const newPopupContent = createPopupContent(spot, index);
+          const newPopup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(newPopupContent);
+          spot.marker.setPopup(newPopup);
+          
+          // もしポップアップが開いていたら、すぐに再表示する
+          if (spot.marker.getPopup().isOpen()) 
+          {
+            spot.marker.togglePopup(); // 一度閉じる
+            spot.marker.togglePopup(); // もう一度開く（新しい内容で）
+          }
+        }
 
         // 円の色を更新
         map.setPaintProperty(spot.circleId, 'fill-color', inRangeNow ? '#00ff00' : '#00ccff');
