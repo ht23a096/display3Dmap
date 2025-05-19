@@ -373,7 +373,7 @@
     // 範囲判定＆更新
     const userCoords = [longitude, latitude];
     shelterSpots.forEach((spot, index) => {
-      const inRangeNow = isUserInRange(userCoords, spot.coordinates, 5);
+      const inRangeNow = isUserInRange(userCoords, spot.coordinates, 10);
 
       if (inRangeNow !== spot.inRange) {
         spot.inRange = inRangeNow;
