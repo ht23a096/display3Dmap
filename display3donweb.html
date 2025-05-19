@@ -213,8 +213,8 @@
       console.warn(`位置情報の取得に失敗しました（エラーコード: ${err.code}）`);
     }
 
-    // 半径5mで範囲内かを判定するヘルパー関数（Haversine）
-  function isUserInRange(userCoords, targetCoords, radiusMeters = 5) {
+    // 半径10mで範囲内かを判定するヘルパー関数（Haversine）
+  function isUserInRange(userCoords, targetCoords, radiusMeters = 10) {
     const R = 6371e3; // 地球の半径（メートル）
     const toRad = deg => deg * Math.PI / 180;
 
@@ -257,7 +257,7 @@
       const circleId = spot.circleId;
       map.addSource(circleId, {
         type: 'geojson',
-        data: createCircleGeoJSON(spot.coordinates, 5)
+        data: createCircleGeoJSON(spot.coordinates, 10)
       });
       map.addLayer({
         id: circleId,
