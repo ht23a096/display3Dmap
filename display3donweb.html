@@ -191,7 +191,7 @@
       window.currentPosition = position;
 
       if (accuracy > 30) {
-        console.warn(位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m）);
+        console.warn(`位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m)`);
         return;
       }
 
@@ -210,7 +210,7 @@
     }
 
     function geoError(err) {
-      console.warn(位置情報の取得に失敗しました（エラーコード: ${err.code}）);
+      console.warn(`位置情報の取得に失敗しました（エラーコード: ${err.code}）`);
     }
 
     // 半径10mで範囲内かを判定するヘルパー関数（Haversine）
@@ -353,7 +353,7 @@
     window.currentPosition = position;
 
     if (accuracy > 30) {
-      console.warn(位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m）);
+      console.warn(`位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m）`);
       return;
     }
 
