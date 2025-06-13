@@ -180,6 +180,20 @@
             'fill-extrusion-base': ['get', 'min_height'],
             'fill-extrusion-opacity': 0.8
           }
+
+          // ペナルティ円レイヤー追加（半径3m）
+            map.addSource(spot.penaltyCircleId, {
+              type: 'geojson',
+              data: createCircleGeoJSON(spot.coordinates, 3)
+            });
+        map.addLayer({
+          id: spot.penaltyCircleId,
+          type: 'fill',
+          source: spot.penaltyCircleId,
+          paint: {
+            'fill-color': '#ff0000',
+            'fill-opacity': 0.4
+          }
         });
 
         addShelterSpots();
@@ -235,7 +249,23 @@
   // サークルレイヤーと範囲内フラグを shelterSpots に追加
   shelterSpots.forEach(spot => {
     spot.inRange = false;
+    
+    // ペナルティ範囲チェック
+    const penaltyInRangeNow = isUserInRange(userCoords, spot.coordinates, 3);
+    if (penaltyInRangeNow !== spot.penaltyInRange) {
+      spot.penaltyInRange = penaltyInRangeNow;
+      
+      // 円の色更新（赤にしたままでもOK）
+      map.setPaintProperty(spot.penaltyCircleId, 'fill-color', penaltyInRangeNow ? '#ff0000' : '#ff6600');
+      
+      // ペナルティが発生したら通知（例: アラート）
+      if (penaltyInRangeNow) {
+        alert(`⚠️「${spot.description}」の危険エリアに入りました！ペナルティが発生します。`);
+      }
+    }
+    spot.penaltyInRange = false;
     spot.circleId = 'circle-' + spot.coordinates.join('-');
+    spot.penaltyCircleId = 'penalty-' + spot.coordinates.join('-');
   });
 
   function addShelterSpots() {
@@ -373,7 +403,7 @@
     // 範囲判定＆更新
     const userCoords = [longitude, latitude];
     shelterSpots.forEach((spot, index) => {
-      const inRangeNow = isUserInRange(userCoords, spot.coordinates, 10);
+    　const inRangeNow = isUserInRange(userCoords, spot.coordinates, 10);
 
       if (inRangeNow !== spot.inRange) {
         spot.inRange = inRangeNow;
