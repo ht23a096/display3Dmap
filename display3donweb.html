@@ -182,6 +182,29 @@
           }
         });
 
+        // 初期化時点での ID 付加 & ペナルティ円の登録
+        shelterSpots.forEach(spot => {
+          spot.inRange = false;
+          spot.penaltyInRange = false;
+          spot.circleId = 'circle-' + spot.coordinates.join('-');
+          spot.penaltyCircleId = 'penalty-' + spot.coordinates.join('-');
+
+          map.addSource(spot.penaltyCircleId, {
+            type: 'geojson',
+            data: createCircleGeoJSON(spot.coordinates, 3)
+          });
+
+          map.addLayer({
+            id: spot.penaltyCircleId,
+            type: 'fill',
+            source: spot.penaltyCircleId,
+            paint: {
+              'fill-color': '#ff0000',
+              'fill-opacity': 0.4
+            }
+          });
+        });
+
         addShelterSpots();
       });
     }
@@ -191,7 +214,7 @@
       window.currentPosition = position;
 
       if (accuracy > 30) {
-        console.warn(`位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m)`);
+        console.warn(`位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m）`);
         return;
       }
 
@@ -207,201 +230,166 @@
         map.flyTo({ center: [longitude, latitude] });
         shouldFollowUser = false;
       }
+
+      const userCoords = [longitude, latitude];
+
+      shelterSpots.forEach((spot, index) => {
+        const inRangeNow = isUserInRange(userCoords, spot.coordinates, 10);
+        if (inRangeNow !== spot.inRange) {
+          spot.inRange = inRangeNow;
+
+          if (spot.marker) {
+            const newPopupContent = createPopupContent(spot, index);
+            const newPopup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(newPopupContent);
+            spot.marker.setPopup(newPopup);
+
+            if (spot.marker.getPopup().isOpen()) {
+              spot.marker.togglePopup();
+              spot.marker.togglePopup();
+            }
+          }
+
+          map.setPaintProperty(spot.circleId, 'fill-color', inRangeNow ? '#00ff00' : '#00ccff');
+        }
+
+        const penaltyInRangeNow = isUserInRange(userCoords, spot.coordinates, 3);
+        if (penaltyInRangeNow !== spot.penaltyInRange) {
+          spot.penaltyInRange = penaltyInRangeNow;
+
+          map.setPaintProperty(
+            spot.penaltyCircleId,
+            'fill-color',
+            penaltyInRangeNow ? '#ff6600' : '#ff0000'
+          );
+
+          if (penaltyInRangeNow) {
+            alert(`⚠️「${spot.description}」の危険エリアに入りました！ペナルティが発生します。`);
+          }
+        }
+      });
     }
 
     function geoError(err) {
       console.warn(`位置情報の取得に失敗しました（エラーコード: ${err.code}）`);
     }
 
-    // 半径10mで範囲内かを判定するヘルパー関数（Haversine）
-  function isUserInRange(userCoords, targetCoords, radiusMeters = 10) {
-    const R = 6371e3; // 地球の半径（メートル）
-    const toRad = deg => deg * Math.PI / 180;
+    function isUserInRange(userCoords, targetCoords, radiusMeters = 10) {
+      const R = 6371e3;
+      const toRad = deg => deg * Math.PI / 180;
+      const φ1 = toRad(userCoords[1]);
+      const φ2 = toRad(targetCoords[1]);
+      const Δφ = toRad(targetCoords[1] - userCoords[1]);
+      const Δλ = toRad(targetCoords[0] - userCoords[0]);
 
-    const φ1 = toRad(userCoords[1]);
-    const φ2 = toRad(targetCoords[1]);
-    const Δφ = toRad(targetCoords[1] - userCoords[1]);
-    const Δλ = toRad(targetCoords[0] - userCoords[0]);
-
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    const distance = R * c; // 距離（メートル）
-    return distance <= radiusMeters;
-  }
-
-  // サークルレイヤーと範囲内フラグを shelterSpots に追加
-  shelterSpots.forEach(spot => {
-    spot.inRange = false;
-    spot.circleId = 'circle-' + spot.coordinates.join('-');
-  });
-
-  function addShelterSpots() {
-    shelterSpots.forEach((spot, index) => {
-      const el = document.createElement('div');
-      el.className = 'shelter-marker';
-
-      const popupContent = createPopupContent(spot, index);
-      const popup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent);
-
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat(spot.coordinates)
-        .setPopup(popup)
-        .addTo(map);
-
-      spot.marker = marker;
-
-      // 円レイヤー追加
-      const circleId = spot.circleId;
-      map.addSource(circleId, {
-        type: 'geojson',
-        data: createCircleGeoJSON(spot.coordinates, 10)
-      });
-      map.addLayer({
-        id: circleId,
-        type: 'fill',
-        source: circleId,
-        paint: {
-          'fill-color': '#00ccff',
-          'fill-opacity': 0.3
-        }
-      });
-    });
-  }
-
-  function createPopupContent(spot, index) {
-    const container = document.createElement('div');
-    const title = document.createElement('h3');
-    title.textContent = spot.name;
-
-    const desc = document.createElement('p');
-    desc.textContent = spot.description;
-
-    if (spot.inRange) {
-      const reward = document.createElement('p');
-      reward.textContent = ' 報酬取得可能 ';
-      reward.style.color = 'green';
-      container.appendChild(reward);
+      const a = Math.sin(Δφ / 2) ** 2 +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c <= radiusMeters;
     }
 
-    const img = document.createElement('img');
-    img.style.width = '100%';
-    img.style.marginTop = '5px';
-    if (spot.image) img.src = spot.image;
+    function addShelterSpots() {
+      shelterSpots.forEach((spot, index) => {
+        const el = document.createElement('div');
+        el.className = 'shelter-marker';
 
-    const btn = document.createElement('button');
-    btn.textContent = '画像を選択';
-    btn.style.marginTop = '5px';
-    btn.addEventListener('click', () => {
-      const input = document.getElementById('imageInput');
-      if (!input) {
-        alert('画像入力フォームが見つかりません。');
-        return;
+        const popupContent = createPopupContent(spot, index);
+        const popup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent);
+
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat(spot.coordinates)
+          .setPopup(popup)
+          .addTo(map);
+        spot.marker = marker;
+
+        map.addSource(spot.circleId, {
+          type: 'geojson',
+          data: createCircleGeoJSON(spot.coordinates, 10)
+        });
+
+        map.addLayer({
+          id: spot.circleId,
+          type: 'fill',
+          source: spot.circleId,
+          paint: {
+            'fill-color': '#00ccff',
+            'fill-opacity': 0.3
+          }
+        });
+      });
+    }
+
+    function createPopupContent(spot, index) {
+      const container = document.createElement('div');
+      const title = document.createElement('h3');
+      title.textContent = spot.name;
+      const desc = document.createElement('p');
+      desc.textContent = spot.description;
+
+      if (spot.inRange) {
+        const reward = document.createElement('p');
+        reward.textContent = '報酬取得可能';
+        reward.style.color = 'green';
+        container.appendChild(reward);
       }
-      input.click();
-      input.onchange = () => {
-        const file = input.files[0];
-        if (file && file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          reader.onload = () => {
-            spot.image = reader.result;
-            img.src = spot.image;
-          };
-          reader.readAsDataURL(file);
+
+      const img = document.createElement('img');
+      img.style.width = '100%';
+      img.style.marginTop = '5px';
+      if (spot.image) img.src = spot.image;
+
+      const btn = document.createElement('button');
+      btn.textContent = '画像を選択';
+      btn.style.marginTop = '5px';
+      btn.addEventListener('click', () => {
+        const input = document.getElementById('imageInput');
+        if (!input) return alert('画像入力フォームが見つかりません。');
+        input.click();
+        input.onchange = () => {
+          const file = input.files[0];
+          if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = () => {
+              spot.image = reader.result;
+              img.src = spot.image;
+            };
+            reader.readAsDataURL(file);
+          }
+        };
+      });
+
+      container.appendChild(title);
+      container.appendChild(desc);
+      container.appendChild(btn);
+      container.appendChild(img);
+      return container;
+    }
+
+    function createCircleGeoJSON(center, radiusInMeters) {
+      const points = 64;
+      const coords = [];
+      const earthRadius = 6378137;
+
+      for (let i = 0; i < points; i++) {
+        const angle = (i * 360) / points;
+        const dx = radiusInMeters * Math.cos(angle * Math.PI / 180);
+        const dy = radiusInMeters * Math.sin(angle * Math.PI / 180);
+
+        const lngOffset = dx / (earthRadius * Math.cos(center[1] * Math.PI / 180)) * (180 / Math.PI);
+        const latOffset = dy / earthRadius * (180 / Math.PI);
+
+        coords.push([center[0] + lngOffset, center[1] + latOffset]);
+      }
+      coords.push(coords[0]);
+
+      return {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [coords]
         }
       };
-    });
-
-    container.appendChild(title);
-    container.appendChild(desc);
-    container.appendChild(btn);
-    container.appendChild(img);
-    return container;
-  }
-
-  function createCircleGeoJSON(center, radiusInMeters) {
-    const points = 64;
-    const coords = [];
-    const earthRadius = 6378137;
-
-    for (let i = 0; i < points; i++) {
-      const angle = (i * 360) / points;
-      const dx = radiusInMeters * Math.cos(angle * Math.PI / 180);
-      const dy = radiusInMeters * Math.sin(angle * Math.PI / 180);
-
-      const lngOffset = dx / (earthRadius * Math.cos(center[1] * Math.PI / 180)) * (180 / Math.PI);
-      const latOffset = dy / earthRadius * (180 / Math.PI);
-
-      coords.push([center[0] + lngOffset, center[1] + latOffset]);
     }
-    coords.push(coords[0]); // close the polygon
-
-    return {
-      type: 'Feature',
-      geometry: {
-        type: 'Polygon',
-        coordinates: [coords]
-      }
-    };
-  }
-
-  // 現在位置更新時の処理：範囲チェックして円色と情報を更新
-  function updatePosition(position) {
-    const { latitude, longitude, accuracy } = position.coords;
-    window.currentPosition = position;
-
-    if (accuracy > 30) {
-      console.warn(`位置情報の誤差が大きいため更新をスキップ（誤差: ${accuracy}m）`);
-      return;
-    }
-
-    if (window.currentMarker) {
-      window.currentMarker.remove();
-    }
-
-    window.currentMarker = new mapboxgl.Marker({ color: 'pink' })
-      .setLngLat([longitude, latitude])
-      .addTo(map);
-
-    if (shouldFollowUser && map) {
-      map.flyTo({ center: [longitude, latitude] });
-      shouldFollowUser = false;
-    }
-
-    // 範囲判定＆更新
-    const userCoords = [longitude, latitude];
-    shelterSpots.forEach((spot, index) => {
-      const inRangeNow = isUserInRange(userCoords, spot.coordinates, 10);
-
-      if (inRangeNow !== spot.inRange) {
-        spot.inRange = inRangeNow;
-        if (spot.marker) {
-          const newPopupContent = createPopupContent(spot, index);
-          const newPopup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(newPopupContent);
-          spot.marker.setPopup(newPopup);
-          
-          // もしポップアップが開いていたら、すぐに再表示する
-          if (spot.marker.getPopup().isOpen()) 
-          {
-            spot.marker.togglePopup(); // 一度閉じる
-            spot.marker.togglePopup(); // もう一度開く（新しい内容で）
-          }
-        }
-
-        // 円の色を更新
-        map.setPaintProperty(spot.circleId, 'fill-color', inRangeNow ? '#00ff00' : '#00ccff');
-
-        // ポップアップ更新（表示中なら再描画）
-        if (map && map.hasLayer(spot.circleId)) {
-          const popupContent = createPopupContent(spot, index);
-          const popup = new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupContent);
-        }
-      }
-    });
-  }
   </script>
 </body>
 </html>
-
