@@ -41,7 +41,6 @@
     let shouldFollowUser = false;
 
     const shelterSpots = [
-      { 
         name: '大阪電気通信大学寝屋川キャンパス', 
         description: 'J号館', 
         coordinates: [135.6259, 34.7607], 
@@ -207,7 +206,6 @@
           }
         });
 
-        // 初期化時点での ID 付加 & ペナルティ円の登録
         shelterSpots.forEach(spot => {
           spot.inRange = false;
           spot.penaltyInRange = false;
@@ -281,6 +279,7 @@
             window.totalRewardPoints = (window.totalRewardPoints || 0) + 1;
             alert(`「${spot.description}」で報酬を獲得しました！（合計: ${window.totalRewardPoints}pt）`);
           }
+        }
 
         const penaltyInRangeNow = isUserInRange(userCoords, spot.coordinates, 3);
         if (penaltyInRangeNow !== spot.penaltyInRange) {
@@ -296,7 +295,7 @@
             alert(`⚠️「${spot.description}」の危険エリアに入りました！ペナルティが発生します。`);
           }
         }
-      });
+      }); 
     }
 
     function geoError(err) {
@@ -318,7 +317,7 @@
       return R * c <= radiusMeters;
     }
 
-    function addShelterSpots() {
+     function addShelterSpots() {
       shelterSpots.forEach((spot, index) => {
         const el = document.createElement('div');
         el.className = 'shelter-marker';
@@ -395,7 +394,7 @@
       return container;
     }
 
-    function createCircleGeoJSON(center, radiusInMeters) {
+    function createCircleGeoJSON(center, radiusInMeters)  {
       const points = 64;
       const coords = [];
       const earthRadius = 6378137;
