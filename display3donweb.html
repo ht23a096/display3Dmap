@@ -45,67 +45,92 @@
         name: '大阪電気通信大学寝屋川キャンパス', 
         description: 'J号館', 
         coordinates: [135.6259, 34.7607], 
-        image: null },
+        image: null
+        rewardCollected: false
+      },
       { 
         name: '大阪電気通信大学寝屋川キャンパス', 
         description: 'A号館', 
         coordinates: [135.6260, 34.7604], 
-        image: null },
+        image: null
+        rewardCollected: false
+      },
       { 
         name: '大阪電気通信大学寝屋川キャンパス', 
         description: 'クラブハウス', 
         coordinates: [135.6254, 34.7601], 
-        image: null },
+        image: null 
+        rewardCollected: false
+      },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '2号館', 
         coordinates: [135.6589, 34.7423], 
-        image: null },
+        image: null
+        rewardCollected: false
+      },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '11号館', 
         coordinates: [135.6594, 34.7420], 
-        image: null },
+        image: null
+        rewardCollected: false
+      },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '5号館', 
         coordinates: [135.6595, 34.7427], 
-        image: null },
+        image: null
+        rewardCollected: false
+      },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '10号館', 
         coordinates: [135.6602, 34.7431], 
-        image: null },
+        image: null 
+        rewardCollected: false
+      },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '体育館', 
         coordinates: [135.6594, 34.7433], 
-        image: null },
+        image: null 
+        rewardCollected: false
+      },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: 'コナミホール', 
         coordinates: [135.6600, 34.7433], 
-        image: null },
+        image: null
+        rewardCollected: false
+      },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '8号館', 
         coordinates: [135.6609, 34.7434], 
-        image: null },
+        image: null
+        rewardCollected: false
+      },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: 'KOZUKIホール', 
         coordinates: [135.6592, 34.7430], 
-        image: null },
+        image: null
+        rewardCollected: false
+      },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '1号館', 
         coordinates: [135.6589, 34.7419], 
-        image: null },
+        image: null 
+        rewardCollected: false
+      },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '6号館', 
         coordinates: [135.6602, 34.7436], 
-        image: null }
+        image: null 
+        rewardCollected: false}
     ];
 
     document.getElementById('recenter-btn').addEventListener('click', () => {
@@ -250,6 +275,18 @@
           }
 
           map.setPaintProperty(spot.circleId, 'fill-color', inRangeNow ? '#00ff00' : '#00ccff');
+
+          if (inRangeNow && !spot.rewardCollected) {
+           const reward = document.createElement('p');
+            reward.textContent = '報酬取得可能';
+            reward.style.color = 'green';
+            container.appendChild(reward);
+          } else if (spot.rewardCollected) {
+            const collected = document.createElement('p');
+            collected.textContent = '報酬獲得済み';
+            collected.style.color = 'gray';
+            container.appendChild(collected);
+          }
         }
 
         const penaltyInRangeNow = isUserInRange(userCoords, spot.coordinates, 3);
