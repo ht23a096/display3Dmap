@@ -53,84 +53,97 @@
         description: 'A号館', 
         coordinates: [135.6260, 34.7604], 
         image: null,
-        rewardCollected: false
+        rewardCollected: false,
+        rewardItem: '非常食'
       },
       { 
         name: '大阪電気通信大学寝屋川キャンパス', 
         description: 'クラブハウス', 
         coordinates: [135.6254, 34.7601], 
         image: null,
-        rewardCollected: false
+        rewardCollected: false,
+        rewardItem: '非常食'
       },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '2号館', 
         coordinates: [135.6589, 34.7423], 
         image: null,
-        rewardCollected: false
+        rewardCollected: false,
+        rewardItem: '非常食'
       },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '11号館', 
         coordinates: [135.6594, 34.7420], 
         image: null,
-        rewardCollected: false
+        rewardCollected: false,
+        rewardItem: '非常食'
       },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '5号館', 
         coordinates: [135.6595, 34.7427], 
         image: null,
-        rewardCollected: false
+        rewardCollected: false,
+        rewardItem: '非常食'
       },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '10号館', 
         coordinates: [135.6602, 34.7431], 
         image: null, 
-        rewardCollected: false
+        rewardCollected: false,
+        rewardItem: '非常食'
       },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '体育館', 
         coordinates: [135.6594, 34.7433], 
         image: null,
-        rewardCollected: false
+        rewardCollected: false,
+        rewardItem: '非常食'
       },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: 'コナミホール', 
         coordinates: [135.6600, 34.7433], 
         image: null,
-        rewardCollected: false
+        rewardCollected: false,
+        rewardItem: '非常食'
       },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '8号館', 
         coordinates: [135.6609, 34.7434], 
         image: null,
-        rewardCollected: false
+        rewardCollected: false,
+        rewardItem: '非常食'
       },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: 'KOZUKIホール', 
         coordinates: [135.6592, 34.7430], 
         image: null,
-        rewardCollected: false
+        rewardCollected: false,
+        rewardItem: '非常食'
       },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '1号館', 
         coordinates: [135.6589, 34.7419], 
         image: null,
-        rewardCollected: false
+        rewardCollected: false,
+        rewardItem: '非常食'
       },
       { 
         name: '大阪電気通信大学四条畷キャンパス', 
         description: '6号館', 
         coordinates: [135.6602, 34.7436], 
         image: null,
-        rewardCollected: false}
+        rewardCollected: false,
+        rewardItem: '非常食'
+      }
     ];
 
     document.getElementById('recenter-btn').addEventListener('click', () => {
@@ -356,13 +369,37 @@
       const desc = document.createElement('p');
       desc.textContent = spot.description;
 
-      if (spot.inRange) {
-        const reward = document.createElement('p');
-        reward.textContent = '報酬取得可能';
-        reward.style.color = 'green';
-        container.appendChild(reward);
-      }
+     if (spot.inRange && !spot.rewardCollected) {
+    const rewardInfo = document.createElement('p');
+    rewardInfo.textContent = `報酬：${spot.rewardItem}`;
+    rewardInfo.style.color = 'green';
 
+    const collectBtn = document.createElement('button');
+    collectBtn.textContent = '報酬を獲得する';
+    collectBtn.onclick = () => {
+      spot.rewardCollected = true;
+
+      // 報酬アイテムを保存
+      if (!window.collectedItems) window.collectedItems = [];
+      window.collectedItems.push(spot.rewardItem);
+
+      alert(`報酬「${spot.rewardItem}」を獲得しました！\n現在のアイテム: ${window.collectedItems.join(', ')}`);
+
+      // ボタンと表示を更新
+      spot.marker.setPopup(new mapboxgl.Popup({ offset: 25 }).setDOMContent(createPopupContent(spot, index)));
+      spot.marker.togglePopup();
+      spot.marker.togglePopup();
+    };
+       
+       container.appendChild(rewardInfo);
+       container.appendChild(collectBtn);
+     } else if (spot.rewardCollected) {
+       const collected = document.createElement('p');
+       collected.textContent = `獲得済みアイテム：${spot.rewardItem}`;
+       collected.style.color = 'gray';
+       container.appendChild(collected);
+     }
+      
       const img = document.createElement('img');
       img.style.width = '100%';
       img.style.marginTop = '5px';
