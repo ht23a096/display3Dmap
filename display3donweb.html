@@ -287,6 +287,7 @@
           }
 
           map.setPaintProperty(spot.circleId, 'fill-color', inRangeNow ? '#00ff00' : '#00ccff');
+        }
 
         const penaltyInRangeNow = isUserInRange(userCoords, spot.coordinates, 3);
         if (penaltyInRangeNow !== spot.penaltyInRange) {
