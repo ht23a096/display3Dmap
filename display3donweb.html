@@ -288,13 +288,6 @@
 
           map.setPaintProperty(spot.circleId, 'fill-color', inRangeNow ? '#00ff00' : '#00ccff');
 
-          if (inRangeNow && !spot.rewardCollected) {
-            spot.rewardCollected = true;
-            window.totalRewardPoints = (window.totalRewardPoints || 0) + 1;
-            alert(`「${spot.description}」で報酬を獲得しました！（合計: ${window.totalRewardPoints}pt）`);
-          }
-        }
-
         const penaltyInRangeNow = isUserInRange(userCoords, spot.coordinates, 3);
         if (penaltyInRangeNow !== spot.penaltyInRange) {
           spot.penaltyInRange = penaltyInRangeNow;
