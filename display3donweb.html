@@ -38,6 +38,7 @@
   <script>
     mapboxgl.accessToken = 'pk.eyJ1IjoibmFrYWhhcmFsYWJvIiwiYSI6ImNtNzE4MmRpMTA0cWcybnIxY3Mwb2U2amgifQ.kvWh0YUk1c9nTHyAr1ooew';
     let map;
+    window.collectedItems = [];
     let shouldFollowUser = false;
 
     const shelterSpots = [
@@ -342,6 +343,27 @@
         map.addSource(spot.circleId, {
           type: 'geojson',
           data: createCircleGeoJSON(spot.coordinates, 10)
+
+        function updateInventoryList() {
+          const list = document.getElementById('inventory-list');
+          list.innerHTML = '';
+          
+          if (window.collectedItems.length === 0) {
+            const li = document.createElement('li');
+            li.textContent = 'アイテムはまだありません。';
+            list.appendChild(li);
+          } else {
+            window.collectedItems.forEach(item => {
+              const li = document.createElement('li');
+              li.textContent = item;
+              list.appendChild(li);
+            });
+          }
+        }
+        
+        document.getElementById('inventory-btn').addEventListener('click', () => {
+          updateInventoryList();
+          document.getElementById('inventory-modal').style.display = 'block';
         });
 
         map.addLayer({
@@ -371,6 +393,8 @@
     const collectBtn = document.createElement('button');
     collectBtn.textContent = '報酬を獲得する';
     collectBtn.onclick = () => {
+      window.collectedItems.push(spot.rewardItem);
+      updateInventoryList();
       spot.rewardCollected = true;
 
       // 報酬アイテムを保存
@@ -452,5 +476,22 @@
       };
     }
   </script>
+  
+  <!-- 持ち物（インベントリ）ボタンとモーダル -->
+  <button id="inventory-btn" style="
+  position: absolute; top: 10px; right: 10px; z-index: 1;
+  padding: 10px; background: white; border-radius: 5px; border: 1px solid #ccc;
+    ">持ち物</button>
+  
+  <div id="inventory-modal" style="
+  display: none; position: fixed; top: 50px; right: 10px;
+  width: 250px; background: white; border: 1px solid #ccc; border-radius: 5px;
+  padding: 10px; z-index: 2; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    ">
+  
+    <h3>持ち物</h3>
+    <ul id="inventory-list" style="list-style: none; padding: 0; margin: 0;"></ul>
+    <button onclick="document.getElementById('inventory-modal').style.display='none'">閉じる</button>
+  </div>
 </body>
 </html>
