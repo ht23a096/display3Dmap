@@ -38,7 +38,7 @@
   <script>
     mapboxgl.accessToken = 'pk.eyJ1IjoibmFrYWhhcmFsYWJvIiwiYSI6ImNtNzE4MmRpMTA0cWcybnIxY3Mwb2U2amgifQ.kvWh0YUk1c9nTHyAr1ooew';
     let map;
-    window.collectedItems = [];
+    window.collectedItems = {};
     let shouldFollowUser = false;
 
     const shelterSpots = [
@@ -348,15 +348,18 @@
         function updateInventoryList() {
           const list = document.getElementById('inventory-list');
           list.innerHTML = '';
+
+          const items = window.collectedItems;
+          const itemNames = Object.keys(items);
           
-          if (window.collectedItems.length === 0) {
+          if (itemNames.length === 0) {
             const li = document.createElement('li');
             li.textContent = 'アイテムはまだありません。';
             list.appendChild(li);
           } else {
-            window.collectedItems.forEach(item => {
+            itemNames.forEach(item => {
               const li = document.createElement('li');
-              li.textContent = item;
+              li.textContent = `${item} ×${items[item]}`;
               list.appendChild(li);
             });
           }
@@ -394,15 +397,22 @@
     const collectBtn = document.createElement('button');
     collectBtn.textContent = '報酬を獲得する';
     collectBtn.onclick = () => {
-      window.collectedItems.push(spot.rewardItem);
-      updateInventoryList();
+      if(spot.rewardCollected) {
+        alert('このアイテムは獲得済みです。');
+        return;
+      }
       spot.rewardCollected = true;
 
       // 報酬アイテムを保存
-      if (!window.collectedItems) window.collectedItems = [];
-      window.collectedItems.push(spot.rewardItem);
+      if (!window.collectedItems[spot.rewardItem]) {
+        window.collectedItems[spot.rewardItem] = 1;
+      } else {
+        window.collectedItems[spot.rewardItem] += 1;
+      }
 
-      alert(`報酬「${spot.rewardItem}」を獲得しました！\n現在のアイテム: ${window.collectedItems.join(', ')}`);
+      updateInventoryList();
+
+      alert(`報酬「${spot.rewardItem}」を獲得しました！`);
 
       // ボタンと表示を更新
       spot.marker.setPopup(new mapboxgl.Popup({ offset: 25 }).setDOMContent(createPopupContent(spot, index)));
