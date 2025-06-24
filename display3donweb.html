@@ -343,6 +343,7 @@
         map.addSource(spot.circleId, {
           type: 'geojson',
           data: createCircleGeoJSON(spot.coordinates, 10)
+        });
 
         function updateInventoryList() {
           const list = document.getElementById('inventory-list');
